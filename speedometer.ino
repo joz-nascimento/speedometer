@@ -73,7 +73,7 @@ byte down[] = {
 
 void setup() {
   Serial.begin(9600);
-  // to enable pull up resistors first write pin mode and then make that pin HIGH
+
   pinMode(BUTTON_A, INPUT);
   digitalWrite(BUTTON_A, HIGH);
 
@@ -95,19 +95,18 @@ void setup() {
   pinMode(BUTTON_K, INPUT);
   digitalWrite(BUTTON_K, HIGH);
 
-
   lcd.init();
   lcd.createChar(0, up);
   lcd.createChar(1, down);
   lcd.backlight();
-  //lcd.noBacklight();
+  
+  pinMode(SENSOR_1, INPUT);
+  pinMode(SENSOR_2, INPUT);
+  
   lcd.setCursor(0,0);
   lcd.print("Luis Antonio");
   lcd.setCursor(0,1);
   lcd.print("e Papai");
-
-  pinMode(SENSOR_1, INPUT);
-  pinMode(SENSOR_2, INPUT);
 }
 
  void LcdShow(String line1, String line2 = ""){
@@ -152,7 +151,6 @@ void GoToUnitMenu(){
 }
 
 void SaveScore(float x){
-  Serial.println(x);
   // Save on Last 10
   for (int i = 10; i > 1; i--) {
     last10[i-1] = last10[i-2];
@@ -171,14 +169,6 @@ void SaveScore(float x){
         top10[j+1] = temp;
       }
     }
-  }
-  Serial.println("Top 10:");
-  for (int i = 0; i < 10; i++) {
-    Serial.println(top10[i]);
-  }
-  Serial.println("Last 10:");
-  for (int i = 0; i < 10; i++) {
-    Serial.println(last10[i]);
   }
 }
 
@@ -248,11 +238,13 @@ void ShowScore(int x){
   }
   
   if(currentMenu == TOP_TEN){
-	for (int i = 0; i < 10; i++){
-	tempList[i] = top10[i] * mult}
+    for (int i = 0; i < 10; i++){
+      tempList[i] = top10[i] * mult;
+      }
   } else{
-	for (int i = 0; i < 10; i++){
-	tempList[i] = last10[i] * mult}
+    for (int i = 0; i < 10; i++){
+      tempList[i] = last10[i] * mult;
+      }
   }
 
   switch (x) {
@@ -288,9 +280,7 @@ void ShowScore(int x){
   LcdShow(s1, s2);
 }
 
-void SelectOption(int x){
-    //String menuOptions[] = {"Use ▲▼ e tecle A", " Inicia leitura ", " Edita distancia",  " 10 melhores    ",  " Ultimos valores", " Unidade: "}
-  
+void SelectOption(int x){  
   switch (x) {
     case 0:
     LcdShow(menuOptions[0], menuOptions[1]);
@@ -336,12 +326,10 @@ void SelectOption(int x){
 }
 
 void UpdateValue(){
-	String u = String(distance%10);
-	String d = String((distance/10)%10);
-	String c = String(distance/100);
-	// "        ↓↓↓     "
-	// "Dist:   000 cm  "
-	lcd.setCursor(5,1);
+	String u = String(distance_temp%10);
+	String d = String((distance_temp/10)%10);
+	String c = String(distance_temp/100);
+	lcd.setCursor(8,1);
 	lcd.print(c+d+u);
 }
 
@@ -428,31 +416,31 @@ void loop() {
   if (currentMenu == EDIT_DISTANCE && holding == false){
     if (x > 534){
       holding = true;
+      cursor_pos = cursor_pos - 1;
+      if (cursor_pos < 0){
+        cursor_pos = 2;
+      }
+      UpdateCursor();
+    }
+    else if (x < 480){
+      holding = true;
       cursor_pos = cursor_pos + 1;
       if (cursor_pos > 2){
         cursor_pos = 0;
       }
-      Positioning_Cursor(cursor_pos);
+      UpdateCursor();
     }
-    else if (x < 480){
+    else if (y < 480){
       holding = true;
-      cursor_pos = cursor_pos - 1;
-      if (cursor_pos < 0){
-        cursor_pos = 0;
-      }
-      Positioning_Cursor(cursor_pos);
-    }
-	else if (y > 534){
-      holding = true;
-      distance_temp = distance_temp - pow(1, cursor_pos);;
+      distance_temp = distance_temp - pow(10, cursor_pos);
       if (distance_temp < 0){
         distance_temp = 0;
       }
       UpdateValue();
     }
-    else if (y < 480){
+    else if (y > 534){
       holding = true;
-      distance_temp = distance_temp + pow(1, cursor_pos);
+      distance_temp = distance_temp + pow(10, cursor_pos);
       if (distance_temp > 999){
         distance_temp = 999;
       }
@@ -476,13 +464,13 @@ void loop() {
     if(startCount && digitalRead(SENSOR_2) == LOW){
       currentMillis = millis();
       float deltaTime = float(currentMillis - startMillis)/1000.0;
-      float velocity = float(distance)/deltaTime;
+      float velocity = float(distance)/100.0/deltaTime;
       startCount = false;
       currentMenu = SCORE;
-	  String s2 = String(velocity) + " m/s";
-	  if(currentUnit == K_H){
-		  String(velocity * ms_to_kmh) + " k/h";
-	  }
+      String s2 = String(velocity) + " m/s";
+      if(currentUnit == K_H){
+        s2 = String(velocity * ms_to_kmh) + " k/h";
+      }
       LcdShow("Velocidade:", s2);
       SaveScore(velocity);
     }
